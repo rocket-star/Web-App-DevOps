@@ -16,5 +16,6 @@ services:
     image: mongo
     networks:
     - myNet
+    restart: always
     ports:
       - 27017:27017

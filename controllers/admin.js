@@ -1,5 +1,16 @@
 const Product = require('../models/product');
 
+const mongoose = require('mongoose');
+
+mongoose.connect(
+  'mongodb://localhost:27017/shop', {
+    useNewUrlParser: true,
+  },
+);
+mongoose.Promise = global.Promise;
+
+const Item = require('../models/item');
+
 exports.getAddProduct = (req, res, next) => {
   res.render('admin/edit-product', {
     pageTitle: 'Add Product',
@@ -16,9 +27,18 @@ exports.postAddProduct = (req, res, next) => {
   const imageUrl = req.body.imageUrl;
   const price = req.body.price;
   const description = req.body.description;
-  const product = new Product(null, title, imageUrl, description, price);// null pour l'id qui est généré automatiquement
-  product.save();
-  res.redirect('/');
+  //const product = new Product(null, title, imageUrl, description, price);// null pour l'id qui est généré automatiquement
+  //product.save();
+  var item = new Item({
+    title: title,
+    imageUrl: imageUrl,
+    price: price,
+    description: description
+  });
+  item.save(function (err, save) {
+    if (err) return console.error(err);
+    res.redirect('/');
+  });
 };
 
 exports.getEditProduct = (req, res, next) => {
@@ -27,7 +47,8 @@ exports.getEditProduct = (req, res, next) => {
     return res.redirect('/');
   }
   const prodId = req.params.productId;
-  Product.findById(prodId, product => {
+
+  Item.findById(prodId, function (err, product) {
     if(!product) {
       return res.redirect('/');
     }
@@ -38,6 +59,18 @@ exports.getEditProduct = (req, res, next) => {
       product: product
     });
   });
+
+  /*Product.findById(prodId, product => {
+    if(!product) {
+      return res.redirect('/');
+    }
+    res.render('admin/edit-product', {
+      pageTitle: 'Edit Product',
+      path: '/admin/edit-product',
+      editing: editMode,// true or false
+      product: product
+    });
+  });*/
 };
 
 exports.postEditProduct = (req, res, next) => {// mis a jours des données et remplacement du produit dans la db (gérer par le "model/product" en fonction de l'existence de l'id )
@@ -46,15 +79,25 @@ exports.postEditProduct = (req, res, next) => {// mis a jours des données et re
   const imageUrl = req.body.imageUrl;
   const price = req.body.price;
   const description = req.body.description;
-  const UpdatedProduct = new Product(id, title, imageUrl, description, price);
-  UpdatedProduct.save();
-  res.redirect('/admin/products');
+
+  const UpdatedProduct = {
+    title: title,
+    imageUrl: imageUrl,
+    price: price,
+    description: description
+  };
+  
+  //const UpdatedProduct = new Product(id, title, imageUrl, description, price);
+  Item.findByIdAndUpdate({_id: id},UpdatedProduct, function(err, result){
+    console.log("ok");
+    res.redirect('/admin/products');
+  });
 };
 
 exports.getProducts = (req, res, next) => {
-  Product.fetchAll(products => {
+  Item.find({}, function(err, items) {
     res.render('admin/products', {
-      prods: products,
+      prods: items,
       pageTitle: 'Admin Products',
       path: '/admin/products'
     });
@@ -63,7 +106,8 @@ exports.getProducts = (req, res, next) => {
 
 exports.postDeleteProduct = (req, res, next) => {
   const prodId = req.body.productId;
-  Product.deleteById(prodId);
-  res.redirect('/admin/products');
+  Item.findByIdAndDelete(prodId, async function () {
+    res.redirect('/admin/products');
+  });
 
 }
